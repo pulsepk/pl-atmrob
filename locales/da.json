@@ -1,0 +1,18 @@
+{
+    "hack_atm_label": "Hack hæveautomat",
+    "drill_atm_label": "Bor i hæveautomaten",
+    "rope_atm_label": "Fastgør reb til hæveautomaten",
+    "pick_up_cash": "Saml penge op",
+    "dispatch_message": "Hæveautomatrøveri i gang ",
+    "wait_robbery": "Du skal vente, før du kan forsøge et nyt røveri.",
+    "not_enough_police": "Der er ikke nok politi i byen",
+    "failed_robbery": "Du mislykkedes med røveriet.",
+    "server_pickup_cash": "Du samlede %s $ op",
+    "rope_attached": "Rebet er fastgjort til hæveautomaten. Fastgør nu den anden ende til et køretøj.",
+    "attach_rope_to_vehicle": "Fastgør reb til køretøj",
+    "rope_vehicle_attached": "Rebet er fastgjort til køretøjet. Kør for at trække hæveautomaten løs.",
+    "atm_detached": "Hæveautomaten er trukket løs! Du kan nu røve den.",
+    "rob_detached_atm": "Røv løsrevet hæveautomat",
+    "no_vehicle_nearby": "Intet køretøj i nærheden til at fastgøre rebet.",
+    "rope_robbery_failed": "Rebet knækkede! Røveriet mislykkedes."
+}
