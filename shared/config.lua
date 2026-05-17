@@ -31,14 +31,12 @@ Config.MoneyDrop = true
 
 Config.AtmModels = {'prop_fleeca_atm', 'prop_atm_01', 'prop_atm_02', 'prop_atm_03'}
 
-Config.Notify = 'ox' --'ox', 'esx', 'okok','qb','wasabi','brutal_notify',custom
-
-Config.Target = 'autodetect' -- 'autodetect', qb-target', 'ox_target'
-
 Config.Hacking = {
-    Minigame = 'ox_lib', --utk_fingerprint, ox_lib, ps-ui-circle, ps-ui-maze, ps-ui-scrambler
-    InitialHackDuration = 2000, --2 seconds
-    LootAtmDuration = 20000 --20 seconds
+    -- Override the minigame for this script only. nil = use PLLib.Minigame autodetect.
+    -- Supported: 'ox_lib', 'M-drilling', 'utk_fingerprint', 'ps-ui-circle', 'ps-ui-maze', 'ps-ui-scrambler'
+    Minigame            = nil,
+    InitialHackDuration = 2000,  -- 2 seconds
+    LootAtmDuration     = 20000, -- 20 seconds
 }
 
 Config.Shop = {
@@ -88,13 +86,5 @@ Config.Police = {
     Job = {'police'},
 }
 
---'ps' for ps-dispatch       | Free: https://github.com/Project-Sloth/ps-dispatch
---'aty' for aty_disptach     | Free: https://github.com/atiysuu/aty_dispatch
---'rcore' for rcore dispatch | Paid: https://store.rcore.cz/
---'cd_dispatch' for cd_dispatch | Paid: https://codesign.pro/product/4206357
---'op' for op-dispatch       | Free: https://github.com/ErrorMauw/op-dispatch
---'custom' for your own
-
-Config.Dispatch = 'custom'
 
 

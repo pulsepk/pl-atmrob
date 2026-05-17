@@ -1,138 +1,281 @@
-local lastRobberyTime = 0
-local resourceName = 'pl-atmrob'
-lib.versionCheck('pulsepk/pl-atmrob')
-
-local atmRobberyState = {}
+local lastRobberyTime  = 0
+local resourceName     = 'pl-atmrob'
+local atmRobberyState  = {}
 local ropeRobberyState = {}
 
-local isEsExtendedStarted = GetResourceState('es_extended') == 'started'
-local isQbCoreStarted = GetResourceState('qb-core') == 'started'
-
---credits to Lation for checkforpolice
---https://github.com/IamLation/lation_247robbery
-lib.callback.register('pl_atmrobbery:checkforpolice', function()
-    local copCount, jobs = 0, {}
-    for _, job in pairs(Config.Police.Job) do
-        jobs[job] = true
+local function hasEnoughPolice()
+    local jobs = {}
+    for _, job in pairs(Config.Police.Job) do jobs[job] = true end
+    local count = 0
+    for _, pid in ipairs(GetPlayers()) do
+        if jobs[GetJob(tonumber(pid))] then count = count + 1 end
     end
-    local requiredCount = Config.Police.required
+    return count >= Config.Police.required
+end
 
-    if isEsExtendedStarted then
-        for _, player in pairs(getPlayers()) do
-            if jobs[player.getJob().name] then
-                copCount = copCount + 1
-            end
-        end
-    elseif isQbCoreStarted then
-        for _, playerId in pairs(getPlayers()) do
-            local player = getPlayer(playerId)
-            if jobs[player.PlayerData.job.name] and player.PlayerData.job.onduty then
-                copCount = copCount + 1
-            end
-        end
-    end
-    return copCount >= requiredCount
-end)
-
-lib.callback.register('pl_atmrobbery:checktime', function()
+local function checkCooldown()
     local timePassed = os.time() - lastRobberyTime
 
     if lastRobberyTime ~= 0 and timePassed < Config.CooldownTimer then
         return false, Config.CooldownTimer - timePassed
     end
 
+    return true
+end
+
+local function normalizeCoords(coords)
+    if type(coords) ~= 'vector3' and type(coords) ~= 'vector4' and type(coords) ~= 'table' then
+        return nil
+    end
+
+    local x, y, z = coords.x, coords.y, coords.z
+    if type(x) ~= 'number' or type(y) ~= 'number' or type(z) ~= 'number' then
+        return nil
+    end
+
+    return vector3(x, y, z)
+end
+
+local function getMethodItem(method)
+    if method == 'hack' then return Config.HackingItem end
+    if method == 'drill' then return Config.DrillItem end
+    if method == 'rope' then return Config.RopeItem end
+end
+
+local function isAtmModel(modelHash)
+    for _, model in ipairs(Config.AtmModels) do
+        if modelHash == GetHashKey(model) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function getNetEntity(netId)
+    if type(netId) ~= 'number' then return nil end
+
+    local entity = NetworkGetEntityFromNetworkId(netId)
+    if not entity or entity == 0 or not DoesEntityExist(entity) then
+        return nil
+    end
+
+    return entity
+end
+
+local function logExploit(src, message)
+    local Identifier = getPlayerIdentifier(src)
+    local PlayerName = getPlayerName(src)
+    print(('^1[Exploit Attempt]^0 %s (%s) %s'):format(PlayerName, Identifier, message))
+end
+
+local function isStateExpired(state)
+    return not state or not state.time or os.time() - state.time > 300
+end
+
+local function playerNearCoords(src, coords, distance)
+    local ped = GetPlayerPed(src)
+    if not ped or ped == 0 then return false end
+    return #(GetEntityCoords(ped) - coords) <= distance
+end
+
+lib.callback.register('pl_atmrobbery:checkforpolice', function()
+    return hasEnoughPolice()
+end)
+
+lib.callback.register('pl_atmrobbery:checktime', function()
+    local ok, remaining = checkCooldown()
+    if not ok then
+        return false, remaining
+    end
+
+    return true
+end)
+
+lib.callback.register('pl_atmrobbery:server:startRobbery', function(src, method, atmCoords, atmNetId)
+    local coords = normalizeCoords(atmCoords)
+    if not coords then
+        logExploit(src, 'sent invalid ATM coords.')
+        return false, 'invalid'
+    end
+
+    if method ~= 'hack' and method ~= 'drill' and method ~= 'rope' then
+        logExploit(src, 'sent invalid robbery method.')
+        return false, 'invalid'
+    end
+
+    if method == 'hack' and not Config.EnableHacking then return false, 'disabled' end
+    if method == 'drill' and not Config.EnableDrilling then return false, 'disabled' end
+    if method == 'rope' and not Config.EnableRopeRobbery then return false, 'disabled' end
+
+    if not playerNearCoords(src, coords, 5.0) then
+        logExploit(src, 'tried to start a robbery too far from ATM.')
+        return false, 'too_far'
+    end
+
+    if not hasEnoughPolice() then
+        return false, 'police'
+    end
+
+    local cooldownOk, remaining = checkCooldown()
+    if not cooldownOk then
+        return false, 'cooldown', remaining
+    end
+
+    local item = getMethodItem(method)
+    if item and RemoveItem(src, item, 1) == false then
+        return false, 'item'
+    end
+
     lastRobberyTime = os.time()
+
+    if method == 'rope' then
+        ropeRobberyState[src] = {
+            started = false,
+            atmCoords = coords,
+            atmNetId = atmNetId,
+            time = os.time()
+        }
+    else
+        atmRobberyState[src] = {
+            minigamePassed = false,
+            pickupcash = 0,
+            method = method,
+            atmCoords = coords,
+            atmNetId = atmNetId,
+            time = os.time()
+        }
+    end
+
     return true
 end)
 
 RegisterServerEvent('pl_atmrobbery:MinigameResult')
 AddEventHandler('pl_atmrobbery:MinigameResult', function(success, method)
     local src = source
-    if success and (method == 'drill' or method == 'hack') then
-        atmRobberyState[src] = {
-            minigamePassed = true,
-            pickupcash = 0,
-            method = method
-        }
-    else
+
+    local state = atmRobberyState[src]
+    if not success then
         atmRobberyState[src] = nil
+        return
     end
+
+    if not state or state.method ~= method or (method ~= 'drill' and method ~= 'hack') then
+        logExploit(src, 'sent minigame success without valid robbery state.')
+        return
+    end
+
+    if isStateExpired(state) or not playerNearCoords(src, state.atmCoords, 5.0) then
+        atmRobberyState[src] = nil
+        logExploit(src, 'sent minigame success with expired or distant robbery state.')
+        return
+    end
+
+    local minTime = method == 'hack' and (math.ceil(Config.Hacking.InitialHackDuration / 1000) + 3) or 5
+    if os.time() - state.time < minTime then
+        atmRobberyState[src] = nil
+        logExploit(src, 'completed minigame impossibly fast.')
+        return
+    end
+
+    state.minigamePassed = true
+    atmRobberyState[src] = state
 end)
 
 RegisterNetEvent('pl_atmrobbery:server:completed')
 AddEventHandler('pl_atmrobbery:server:completed', function(atmCoords)
     local src = source
-    local Player = getPlayer(src)
-    local Identifier = getPlayerIdentifier(src)
-    local PlayerName = getPlayerName(src)
-    local ped = GetPlayerPed(src)
-    local distance = GetEntityCoords(ped)
+    local state = atmRobberyState[src]
 
-    if #(distance - atmCoords) <= 5 then
-        if Player then
-            local state = atmRobberyState[src]
-            if state and state.minigamePassed then
-                local method = state.method or 'drill'
-                local maxCashPiles = method == 'hack' and Config.Reward.hack_cash_pile or Config.Reward.drill_cash_pile
-
-                state.pickupcash = state.pickupcash + 1
-                AddPlayerMoney(Player, Config.Reward.account, Config.Reward.cash_prop_value)
-
-                TriggerClientEvent('pl_atmrobbery:notification', src, Locale('server_pickup_cash', Config.Reward.cash_prop_value), 'success')
-
-                if state.pickupcash >= maxCashPiles then
-                    atmRobberyState[src] = nil
-                else
-                    atmRobberyState[src] = state
-                end
-            else
-                print(('^1[Exploit Attempt]^0 %s (%s) tried to rob ATM without completing the minigame.'):format(PlayerName, Identifier))
-            end
-        end
-    else
-        print(('^1[Exploit Attempt]^0 %s (%s) triggered robbery too far from ATM.'):format(PlayerName, Identifier))
+    if not Config.MoneyDrop then
+        logExploit(src, 'tried to pick up cash while MoneyDrop is disabled.')
+        return
     end
+
+    if not state or not state.minigamePassed then
+        logExploit(src, 'tried to rob ATM without completing the minigame.')
+        return
+    end
+
+    if isStateExpired(state) or not playerNearCoords(src, state.atmCoords, 5.0) then
+        atmRobberyState[src] = nil
+        logExploit(src, 'triggered robbery too far from ATM or after state expired.')
+        return
+    end
+
+    local method       = state.method or 'drill'
+    local maxCashPiles = method == 'hack' and Config.Reward.hack_cash_pile or Config.Reward.drill_cash_pile
+
+    state.pickupcash = state.pickupcash + 1
+    AddPlayerMoney(src, Config.Reward.account, Config.Reward.cash_prop_value)
+
+    TriggerClientEvent('pl_atmrobbery:notification', src, string.format(Locale('server_pickup_cash'), Config.Reward.cash_prop_value), 'success')
+
+    if state.pickupcash >= maxCashPiles then
+        atmRobberyState[src] = nil
+    else
+        atmRobberyState[src] = state
+    end
+end)
+
+RegisterNetEvent('pl_atmrobbery:server:lootComplete')
+AddEventHandler('pl_atmrobbery:server:lootComplete', function(atmCoords)
+    local src = source
+    local state = atmRobberyState[src]
+
+    if Config.MoneyDrop then
+        logExploit(src, 'tried to loot full ATM reward while MoneyDrop is enabled.')
+        return
+    end
+
+    if not state or not state.minigamePassed then
+        logExploit(src, 'tried to loot ATM without completing the minigame.')
+        return
+    end
+
+    if isStateExpired(state) or not playerNearCoords(src, state.atmCoords, 5.0) then
+        atmRobberyState[src] = nil
+        logExploit(src, 'triggered loot too far from ATM or after state expired.')
+        return
+    end
+
+    local method      = state.method or 'drill'
+    local cashPiles   = method == 'hack' and Config.Reward.hack_cash_pile or Config.Reward.drill_cash_pile
+    local totalReward = cashPiles * Config.Reward.cash_prop_value
+
+    AddPlayerMoney(src, Config.Reward.account, totalReward)
+    TriggerClientEvent('pl_atmrobbery:notification', src, string.format(Locale('server_pickup_cash'), totalReward), 'success')
+    atmRobberyState[src] = nil
 end)
 
 RegisterNetEvent('pl_atmrobbery:rope_robbery_completed')
 AddEventHandler('pl_atmrobbery:rope_robbery_completed', function(atmCoords)
     local src = source
-    local Player = getPlayer(src)
-    local Identifier = getPlayerIdentifier(src)
-    local PlayerName = getPlayerName(src)
-    local ped = GetPlayerPed(src)
-    local playerCoords = GetEntityCoords(ped)
-
     local state = ropeRobberyState[src]
 
-    if #(playerCoords - atmCoords) > 15.0 then
-        print(('^1[Exploit Attempt]^0 %s (%s) triggered rope robbery too far from ATM.'):format(PlayerName, Identifier))
+    if not state or not state.started or not state.detached then
+        logExploit(src, 'triggered rope robbery without valid completed state.')
         return
     end
 
-    if not state or not state.started then
-        print(('^1[Exploit Attempt]^0 %s (%s) triggered rope robbery without valid state.'):format(PlayerName, Identifier))
-        return
-    end
-
-    if os.time() - state.time > 300 then
+    if isStateExpired(state) then
         ropeRobberyState[src] = nil
-        print(('^1[Exploit Attempt]^0 %s (%s) rope robbery expired.'):format(PlayerName, Identifier))
+        logExploit(src, 'rope robbery expired.')
         return
     end
 
-    if Player then
-        local totalReward = Config.Reward.reward
-        AddPlayerMoney(Player, Config.Reward.account, totalReward)
-
-        TriggerClientEvent(
-            'pl_atmrobbery:notification',
-            src,
-            string.format(Locale('server_pickup_cash'), totalReward),
-            'success'
-        )
-        TriggerClientEvent('pl_atmrobbery:rope:requestCleanup', -1)
+    local coords = normalizeCoords(atmCoords) or state.atmCoords
+    if not playerNearCoords(src, coords, 15.0) or (state.atmCoords and #(coords - state.atmCoords) > 35.0) then
+        ropeRobberyState[src] = nil
+        logExploit(src, 'triggered rope robbery too far from ATM.')
+        return
     end
+
+    local totalReward = Config.Reward.reward
+    AddPlayerMoney(src, Config.Reward.account, totalReward)
+
+    TriggerClientEvent('pl_atmrobbery:notification', src, string.format(Locale('server_pickup_cash'), totalReward), 'success')
+    TriggerClientEvent('pl_atmrobbery:rope:requestCleanup', -1)
 
     ropeRobberyState[src] = nil
 end)
@@ -142,12 +285,39 @@ RegisterNetEvent('pl_atmrobbery:rope:requestAttachVehicle', function(payload)
     if type(payload) ~= 'table' then return end
     if not payload.atmNetId or not payload.vehicleNetId then return end
 
-    ropeRobberyState[src] = {
-        started = true,
-        atmNetId = payload.atmNetId,
-        vehicleNetId = payload.vehicleNetId,
-        time = os.time()
-    }
+    local state = ropeRobberyState[src]
+    if not state or isStateExpired(state) then
+        ropeRobberyState[src] = nil
+        logExploit(src, 'tried to attach rope without valid robbery state.')
+        return
+    end
+
+    local atmEntity = getNetEntity(payload.atmNetId)
+    local vehicleEntity = getNetEntity(payload.vehicleNetId)
+    if not atmEntity or not vehicleEntity or not isAtmModel(GetEntityModel(atmEntity)) then
+        logExploit(src, 'tried to attach rope to invalid entities.')
+        return
+    end
+
+    local atmCoords = GetEntityCoords(atmEntity)
+    local vehicleCoords = GetEntityCoords(vehicleEntity)
+    if #(atmCoords - state.atmCoords) > 5.0 or #(vehicleCoords - atmCoords) > 25.0 then
+        logExploit(src, 'tried to attach rope with entities too far apart.')
+        return
+    end
+
+    if not playerNearCoords(src, atmCoords, 10.0) then
+        logExploit(src, 'tried to attach rope too far from ATM.')
+        return
+    end
+
+    state.started = true
+    state.atmNetId = payload.atmNetId
+    state.vehicleNetId = payload.vehicleNetId
+    state.initialAtmCoords = atmCoords
+    state.initialVehicleCoords = vehicleCoords
+    state.time = os.time()
+    ropeRobberyState[src] = state
 
     TriggerClientEvent('pl_atmrobbery:rope:create', -1, {
         atmNetId = payload.atmNetId,
@@ -158,34 +328,41 @@ end)
 
 
 RegisterNetEvent('pl_atmrobbery:rope:requestDetach', function(payload)
+    local src = source
     if type(payload) ~= 'table' then return end
     if not payload.atmNetId or not payload.vehicleNetId then return end
+
+    local state = ropeRobberyState[src]
+    if not state or not state.started or state.atmNetId ~= payload.atmNetId or state.vehicleNetId ~= payload.vehicleNetId then
+        logExploit(src, 'tried to detach rope without valid state.')
+        return
+    end
+
+    local atmEntity = getNetEntity(payload.atmNetId)
+    local vehicleEntity = getNetEntity(payload.vehicleNetId)
+    if not atmEntity or not vehicleEntity then
+        logExploit(src, 'tried to detach rope with invalid entities.')
+        return
+    end
+
+    local currentAtmCoords = GetEntityCoords(atmEntity)
+    local currentVehicleCoords = GetEntityCoords(vehicleEntity)
+    local atmDisplacement = #(currentAtmCoords - state.initialAtmCoords)
+    local vehicleDistance = #(currentVehicleCoords - state.initialVehicleCoords)
+
+    if vehicleDistance < Config.RopeRobbery.RequiredDistance and atmDisplacement < 3.0 then
+        logExploit(src, 'tried to detach rope before moving the ATM or vehicle far enough.')
+        return
+    end
+
+    state.detached = true
+    state.detachedCoords = currentAtmCoords
+    ropeRobberyState[src] = state
 
     TriggerClientEvent('pl_atmrobbery:rope:detachATM', -1, {
         atmNetId = payload.atmNetId,
         vehicleNetId = payload.vehicleNetId
     })
-end)
-
-RegisterNetEvent('pl_atmrobbery:server:removeRope', function()
-    local src = source
-    local player = getPlayer(src)
-    if not player then return end
-    RemoveItem(src, Config.RopeItem, 1)
-end)
-
-RegisterNetEvent('pl_atmrobbery:server:removeDrill', function()
-    local src = source
-    local player = getPlayer(src)
-    if not player then return end
-    RemoveItem(src, Config.DrillItem, 1)
-end)
-
-RegisterNetEvent('pl_atmrobbery:server:removeHackingDevice', function()
-    local src = source
-    local player = getPlayer(src)
-    if not player then return end
-    RemoveItem(src, Config.HackingItem, 1)
 end)
 
 local WaterMark = function()
@@ -199,9 +376,9 @@ end
 
 AddEventHandler('onServerResourceStart', function(resourceName)
     if resourceName == GetCurrentResourceName() then
+        lib.versionCheck('pulsepk/pl-atmrob')
         if Config.DebugPrints then
             print('M-drilling' .. " Minigame → " .. (GetResourceState('M-drilling') == 'started' and "^2Found^7" or "^1Not Found^7"))
-            print(Config.Hacking.Minigame .. " Minigame → " .. (GetResourceState(Config.Hacking.Minigame) == 'started' and "^2Found^7" or "^1Not Found^7"))
             print('')
         end
         if Config.WaterMark then

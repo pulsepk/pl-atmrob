@@ -6,9 +6,6 @@ Take your server to the next level with this fully customizable **ATM Robbery Sc
 Designed for top frameworks like **ESX**, **QBCore**, and **Qbox**, this script delivers immersive gameplay with realistic mechanics, dynamic rewards, and extensive integrations.
 
 
-[![ZAP-Hosting Gameserver and Webhosting](https://r2.fivemanage.com/JEc8nqRsuJODhwqwkKd7o/zap-hosting-banner-pulsescripts.png)](https://zap-hosting.com/pulsescripts?voucher=pulse-20)
-
-
 ## 🌟 Key Features
 ######
 - ✅ Framework Compatibility: Supports ESX, QBCore, and Qbox frameworks.
@@ -46,6 +43,7 @@ Designed for top frameworks like **ESX**, **QBCore**, and **Qbox**, this script 
 
 ## Dependencies
 - [ox_lib](https://github.com/overextended/ox_lib/releases)
+-[pl_lib](https://github.com/pulsepk/pl_lib)
 - [utk_fingerprint](https://github.com/utkuali/Finger-Print-Hacking-Game)
 - [ps-ui](https://github.com/Project-Sloth/ps-ui) - Optional
 - [M-drilling](https://github.com/MxttDev/M-drilling)

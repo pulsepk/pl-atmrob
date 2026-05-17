@@ -2,9 +2,18 @@ if not Config.Shop.Enable then return end
 
 local shopped
 
-local targetResource = Utils.GetTarget()
-
 print(("^2[Shop] Initializing shop: ^7%s"):format(Config.Shop.name))
+
+local function openShopAction()
+    if GetResourceState('ox_inventory') == 'started' then
+        exports.ox_inventory:openInventory('shop', { type = Config.Shop.id, id = 1 })
+    elseif GetResourceState('qb-inventory') == 'started' then
+        TriggerServerEvent('pl-atmrob:server:OpenShopQB')
+    end
+end
+
+RegisterNetEvent('pl_atmrob:client:openShop')
+AddEventHandler('pl_atmrob:client:openShop', function() openShopAction() end)
 
 CreateThread(function()
     -- Spawn Ped
@@ -30,40 +39,13 @@ CreateThread(function()
     end
 
     -- Add Target Option
-    local openShopAction = function()
-        if GetResourceState('ox_inventory') == 'started' then
-            exports.ox_inventory:openInventory('shop', { type = Config.Shop.id, id = 1 })
-        elseif GetResourceState('qb-inventory') == 'started' then
-            TriggerServerEvent('pl-atmrob:server:OpenShopQB')
-        end
-    end
-
-    if targetResource == 'ox_target' then
-        exports.ox_target:addLocalEntity(shopped, {
-            {
-                label = "Open Shop",
-                icon = "fa-solid fa-shop",
-                onSelect = openShopAction
-            }
-        })
-
-    elseif targetResource == 'qb-target' then
-        exports['qb-target']:AddTargetEntity(shopped, {
-            options = {
-                {
-                    type = "client",
-                    event = "custom:openShop",
-                    icon = "fa-solid fa-shop",
-                    label = "Open Shop"
-                }
-            },
-            distance = 2.0
-        })
-
-        RegisterNetEvent("custom:openShop", function()
-            openShopAction()
-        end)
-    end
+    exports['pl_lib']:AddEntityTarget(shopped, {
+        name     = 'pl_atmrob_shop',
+        label    = 'Open Shop',
+        icon     = 'fa-solid fa-shop',
+        distance = 2.0,
+        event    = 'pl_atmrob:client:openShop',
+    })
 end)
 
 -- Clean up on stop
