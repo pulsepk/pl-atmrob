@@ -133,10 +133,7 @@ AddEventHandler('pl_atmrobbery_drill', function(data)
             if Config.Police.notify then
                 SendDispatch()
             end
-            if GetResourceState('M-drilling') ~= 'started' then
-                print("^1[ATM Robbery]^0 Drilling minigame resource not found or not started: M-drilling")
-            end
-            TriggerEvent("Drilling:Start", function(success)
+            RunDrillMinigame(function(success)
                 if success then
                     TriggerServerEvent('pl_atmrobbery:MinigameResult', true, 'drill')
                     if not Config.MoneyDrop then
@@ -194,7 +191,7 @@ function LootATM(atmCoords)
     TriggerServerEvent('pl_atmrobbery:server:lootComplete', atmCoords)
 end
 
-RegisterNetEvent('pl_atmrobbery:StartMinigame', function(entity, atmCoords, atmModel)
+AddEventHandler('pl_atmrobbery:StartMinigame', function(entity, atmCoords, atmModel)
     local function handleResult(success)
         if success then
             TriggerServerEvent('pl_atmrobbery:MinigameResult', true, 'hack')
@@ -418,6 +415,7 @@ function StartRopeAttachment(atmEntity, atmCoords, atmModel)
     NetworkRegisterEntityAsNetworked(atmEntity)
     local atmNetId = NetworkGetNetworkIdFromEntity(atmEntity)
 
+    TryRequestControl(atmEntity, 1000)
     SetEntityDynamic(atmEntity, true)
     SetEntityHasGravity(atmEntity, false)
     SetEntityCollision(atmEntity, true, true)
@@ -455,6 +453,10 @@ function AddVehicleRopeTarget(atmNetId, atmEntity)
                 table.insert(nearbyVehicles, vehicle)
             end
         end
+    end
+
+    if #nearbyVehicles == 0 then
+        TriggerEvent('pl_atmrobbery:notification', Locale('no_vehicle_nearby'), 'error')
     end
 
     for _, vehicle in pairs(nearbyVehicles) do
@@ -501,13 +503,19 @@ AddEventHandler('pl_atmrobbery_attach_vehicle_rope', function(data)
     NetworkRegisterEntityAsNetworked(vehicle)
     local vehicleNetId = NetworkGetNetworkIdFromEntity(vehicle)
 
-    st.ropeAttached = true
-    st.vehicleNetId = vehicleNetId
-
-    TriggerServerEvent('pl_atmrobbery:rope:requestAttachVehicle', {
+    local ok, reason = lib.callback.await('pl_atmrobbery:rope:requestAttachVehicle', false, {
         atmNetId = atmNetId,
         vehicleNetId = vehicleNetId
     })
+
+    if not ok then
+        local msg = reason == 'too_far' and Locale('rope_robbery_failed') or Locale('failed_robbery')
+        TriggerEvent('pl_atmrobbery:notification', msg, 'error')
+        return
+    end
+
+    st.ropeAttached = true
+    st.vehicleNetId = vehicleNetId
 
     TriggerEvent('pl_atmrobbery:notification', Locale('rope_vehicle_attached'), 'success')
     RemoveVehicleRopeTargetByNetId(atmNetId)

@@ -21,14 +21,18 @@ function TryRequestControl(entity, timeoutMs)
     return _lib:TryRequestControl(entity, timeoutMs)
 end
 
--- Runs the configured minigame and calls callback(success).
--- Uses Config.Hacking.Minigame if set, otherwise falls back to PLLib.Minigame autodetect.
+-- Runs the hacking minigame. Uses Config.Hacking.Minigame if set, otherwise pl_lib autodetect.
 function RunMinigame(callback, opts)
     opts = opts or {}
     if Config.Hacking.Minigame then
         opts.system = Config.Hacking.Minigame
     end
     _lib:DoMinigame(callback, opts)
+end
+
+-- Runs the drilling minigame. Always uses Config.Drilling.Minigame (defaults to 'M-drilling').
+function RunDrillMinigame(callback)
+    _lib:DoMinigame(callback, { system = Config.Drilling.Minigame })
 end
 
 -- Sends a police dispatch alert — pl_lib handles system routing automatically.
