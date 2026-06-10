@@ -3,19 +3,16 @@
     "drill_atm_label": "Drill ATM",
     "rope_atm_label": "Attach Rope to ATM",
     "pick_up_cash": "Pick up Cash",
-    "dispatch_message": "ATM Robbery in progress ",
+    "dispatch_message": "ATM Robbery in progress",
     "wait_robbery": "You need to wait before attempting another robbery.",
-    "not_enough_police": "Not Enough Police in the City",
-    "failed_robbery": "You have failed the robbery attempt.",
-    "server_pickup_cash": "You picked up %s $",
+    "not_enough_police": "Not enough police in the city.",
+    "failed_robbery": "You failed the robbery attempt.",
+    "server_pickup_cash": "You received $%s",
     "rope_attached": "Rope attached to ATM. Now attach the other end to a vehicle.",
     "attach_rope_to_vehicle": "Attach Rope to Vehicle",
-    "rope_vehicle_attached": "Rope attached to vehicle. Drive to pull the ATM.",
-    "atm_detached": "ATM has been pulled loose! You can now rob it.",
-    "rob_detached_atm": "Rob Detached ATM",
-    "no_vehicle_nearby": "No vehicle nearby to attach rope to.",
-    "rope_robbery_failed": "Rope broke! The robbery failed."
+    "rope_vehicle_attached": "Rope attached to vehicle. Drive away to pull the ATM loose.",
+    "atm_detached": "ATM pulled loose! Interact with it to collect the cash.",
+    "rob_detached_atm": "Loot ATM",
+    "no_vehicle_nearby": "No vehicle nearby. Park a vehicle within range first.",
+    "rope_robbery_failed": "The rope snapped — robbery failed."
 }
-
-
-

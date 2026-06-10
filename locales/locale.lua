@@ -1,4 +1,3 @@
-Locales = {}
 LocalLang = {}
 
 function LoadLocale(lang)

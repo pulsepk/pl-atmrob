@@ -1,19 +1,18 @@
 {
     "hack_atm_label": "Pirater le GAB",
     "drill_atm_label": "Forer le GAB",
-    "rope_atm_label": "Attacher la Corde au GAB",
-    "pick_up_cash": "Ramasser l'Argent",
-    "dispatch_message": "Braquage de GAB en cours ",
+    "rope_atm_label": "Attacher la corde au GAB",
+    "pick_up_cash": "Ramasser l'argent",
+    "dispatch_message": "Braquage de GAB en cours",
     "wait_robbery": "Vous devez attendre avant de tenter un autre braquage.",
-    "not_enough_police": "Pas assez de police dans la ville",
+    "not_enough_police": "Pas assez de police dans la ville.",
     "failed_robbery": "Vous avez échoué la tentative de braquage.",
-    "server_pickup_cash": "Vous avez ramassé %s $",
-    "rope_attached": "Corde attachée au GAB et au véhicule le plus proche. Conduisez le véhicule pour tirer le GAB.",
-    "rope_vehicle_attached": "Corde attachée au véhicule. Conduisez pour tirer le GAB.",
-    "atm_detached": "Le GAB a été arraché ! Vous pouvez maintenant le braquer.",
-    "rob_detached_atm": "Braquer le GAB Détaché",
-    "no_vehicle_nearby": "Aucun véhicule à proximité pour attacher la corde.",
-    "rope_robbery_failed": "Braquage à la corde échoué. Le GAB est toujours sécurisé."
+    "server_pickup_cash": "Vous avez reçu $%s",
+    "rope_attached": "Corde attachée au GAB. Attachez maintenant l'autre extrémité à un véhicule.",
+    "attach_rope_to_vehicle": "Attacher la corde au véhicule",
+    "rope_vehicle_attached": "Corde attachée au véhicule. Conduisez pour arracher le GAB.",
+    "atm_detached": "Le GAB a été arraché ! Interagissez avec lui pour récupérer l'argent.",
+    "rob_detached_atm": "Piller le GAB",
+    "no_vehicle_nearby": "Aucun véhicule à proximité. Garez-en un à portée d'abord.",
+    "rope_robbery_failed": "La corde a lâché — braquage échoué."
 }
-
-

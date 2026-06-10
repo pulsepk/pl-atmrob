@@ -3,17 +3,16 @@
     "drill_atm_label": "ATM'yi Del",
     "rope_atm_label": "ATM'ye İp Bağla",
     "pick_up_cash": "Parayı Topla",
-    "dispatch_message": "ATM soygunu devam ediyor ",
+    "dispatch_message": "ATM soygunu devam ediyor",
     "wait_robbery": "Başka bir soygun denemeden önce beklemen gerekiyor.",
-    "not_enough_police": "Şehirde yeterli polis yok",
+    "not_enough_police": "Şehirde yeterli polis yok.",
     "failed_robbery": "Soygun girişimi başarısız oldu.",
-    "server_pickup_cash": "%s $ topladın",
-    "rope_attached": "İp ATM'ye ve en yakın araca bağlandı. ATM'yi çekmek için aracı sür.",
-    "rope_vehicle_attached": "İp araca bağlandı. ATM'yi çekmek için sür.",
-    "atm_detached": "ATM söküldü! Artık soyabilirsin.",
-    "rob_detached_atm": "Sökülen ATM'yi Soy",
-    "no_vehicle_nearby": "İp bağlamak için yakında araç yok.",
-    "rope_robbery_failed": "İp soygunu başarısız. ATM hala güvende."
+    "server_pickup_cash": "$%s aldın",
+    "rope_attached": "İp ATM'ye bağlandı. Şimdi diğer ucu bir araca bağla.",
+    "attach_rope_to_vehicle": "İpi Araca Bağla",
+    "rope_vehicle_attached": "İp araca bağlandı. ATM'yi sökmek için sür.",
+    "atm_detached": "ATM söküldü! Parayı toplamak için etkileşime geç.",
+    "rob_detached_atm": "ATM'yi Yağmala",
+    "no_vehicle_nearby": "Yakında araç yok. Önce menzil içine bir araç park et.",
+    "rope_robbery_failed": "İp koptu — soygun başarısız."
 }
-
-
