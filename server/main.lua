@@ -42,16 +42,6 @@ local function getMethodItem(method)
     if method == 'rope' then return Config.RopeItem end
 end
 
-local function isAtmModel(modelHash)
-    for _, model in ipairs(Config.AtmModels) do
-        if modelHash == GetHashKey(model) then
-            return true
-        end
-    end
-
-    return false
-end
-
 local function getNetEntity(netId)
     if type(netId) ~= 'number' then return nil end
 
@@ -78,19 +68,6 @@ local function playerNearCoords(src, coords, distance)
     if not ped or ped == 0 then return false end
     return #(GetEntityCoords(ped) - coords) <= distance
 end
-
-lib.callback.register('pl_atmrobbery:checkforpolice', function()
-    return hasEnoughPolice()
-end)
-
-lib.callback.register('pl_atmrobbery:checktime', function()
-    local ok, remaining = checkCooldown()
-    if not ok then
-        return false, remaining
-    end
-
-    return true
-end)
 
 lib.callback.register('pl_atmrobbery:server:startRobbery', function(src, method, atmCoords, atmNetId)
     local coords = normalizeCoords(atmCoords)
@@ -264,13 +241,6 @@ AddEventHandler('pl_atmrobbery:rope_robbery_completed', function(atmCoords)
         return
     end
 
-    local coords = normalizeCoords(atmCoords) or state.atmCoords
-    if not playerNearCoords(src, coords, 15.0) or (state.atmCoords and #(coords - state.atmCoords) > 35.0) then
-        ropeRobberyState[src] = nil
-        logExploit(src, 'triggered rope robbery too far from ATM.')
-        return
-    end
-
     local totalReward = Config.Reward.reward
     AddPlayerMoney(src, Config.Reward.account, totalReward)
 
@@ -280,35 +250,57 @@ AddEventHandler('pl_atmrobbery:rope_robbery_completed', function(atmCoords)
     ropeRobberyState[src] = nil
 end)
 
-RegisterNetEvent('pl_atmrobbery:rope:requestAttachVehicle', function(payload)
-    local src = source
-    if type(payload) ~= 'table' then return end
-    if not payload.atmNetId or not payload.vehicleNetId then return end
+lib.callback.register('pl_atmrobbery:rope:requestAttachVehicle', function(src, payload)
+    if type(payload) ~= 'table' then return false, 'invalid' end
+    if not payload.atmNetId or not payload.vehicleNetId then return false, 'invalid' end
 
     local state = ropeRobberyState[src]
     if not state or isStateExpired(state) then
         ropeRobberyState[src] = nil
         logExploit(src, 'tried to attach rope without valid robbery state.')
-        return
+        return false, 'no_state'
+    end
+
+    -- Verify the ATM net ID matches what was registered at robbery start
+    if payload.atmNetId ~= state.atmNetId then
+        logExploit(src, 'tried to attach rope with a different ATM than robbery was started with.')
+        return false, 'entity'
     end
 
     local atmEntity = getNetEntity(payload.atmNetId)
     local vehicleEntity = getNetEntity(payload.vehicleNetId)
-    if not atmEntity or not vehicleEntity or not isAtmModel(GetEntityModel(atmEntity)) then
-        logExploit(src, 'tried to attach rope to invalid entities.')
-        return
+    if not atmEntity or not vehicleEntity then
+        if Config.DebugPrints then
+            print(('[pl-atmrob] rope:requestAttachVehicle — entity lookup failed: atm=%s veh=%s'):format(tostring(atmEntity), tostring(vehicleEntity)))
+        end
+        return false, 'entity'
     end
 
     local atmCoords = GetEntityCoords(atmEntity)
     local vehicleCoords = GetEntityCoords(vehicleEntity)
-    if #(atmCoords - state.atmCoords) > 5.0 or #(vehicleCoords - atmCoords) > 25.0 then
-        logExploit(src, 'tried to attach rope with entities too far apart.')
-        return
+
+    if Config.DebugPrints then
+        print(('[pl-atmrob] rope:requestAttachVehicle — atmDrift=%.1f vehDist=%.1f playerDist=%.1f'):format(
+            #(atmCoords - state.atmCoords),
+            #(vehicleCoords - atmCoords),
+            #(GetEntityCoords(GetPlayerPed(src)) - atmCoords)
+        ))
     end
 
-    if not playerNearCoords(src, atmCoords, 10.0) then
+    if #(atmCoords - state.atmCoords) > 5.0 then
+        logExploit(src, 'tried to attach rope — ATM drifted too far from original position.')
+        return false, 'atm_moved'
+    end
+
+    if #(vehicleCoords - atmCoords) > 25.0 then
+        logExploit(src, 'tried to attach rope — vehicle too far from ATM.')
+        return false, 'too_far'
+    end
+
+    -- Player walked to the vehicle, so check against vehicle scan radius (20m) + target distance (3m) + buffer
+    if not playerNearCoords(src, atmCoords, 30.0) then
         logExploit(src, 'tried to attach rope too far from ATM.')
-        return
+        return false, 'too_far'
     end
 
     state.started = true
@@ -324,6 +316,8 @@ RegisterNetEvent('pl_atmrobbery:rope:requestAttachVehicle', function(payload)
         vehicleNetId = payload.vehicleNetId,
         owner = src
     })
+
+    return true
 end)
 
 

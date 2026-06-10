@@ -32,11 +32,17 @@ Config.MoneyDrop = true
 Config.AtmModels = {'prop_fleeca_atm', 'prop_atm_01', 'prop_atm_02', 'prop_atm_03'}
 
 Config.Hacking = {
-    -- Override the minigame for this script only. nil = use PLLib.Minigame autodetect.
-    -- Supported: 'ox_lib', 'M-drilling', 'utk_fingerprint', 'ps-ui-circle', 'ps-ui-maze', 'ps-ui-scrambler'
-    Minigame            = nil,
+    -- nil = pl_lib autodetect. Set to a value to force a specific minigame.
+    -- Supported: 'ox_lib' | 'M-drilling' | 'utk_fingerprint' | 'ps-ui-circle' | 'ps-ui-maze' | 'ps-ui-scrambler'
+    Minigame            = 'utk_fingerprint',
     InitialHackDuration = 2000,  -- 2 seconds
     LootAtmDuration     = 20000, -- 20 seconds
+}
+
+Config.Drilling = {
+    -- Minigame used for the drill action. Defaults to M-drilling.
+    -- Supported: 'M-drilling' | 'ox_lib' | 'utk_fingerprint' | 'ps-ui-circle' | 'ps-ui-maze' | 'ps-ui-scrambler'
+    Minigame = 'M-drilling',
 }
 
 Config.Shop = {
